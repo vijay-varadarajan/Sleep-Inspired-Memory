@@ -1,0 +1,19 @@
+# Core dependencies
+langchain>=0.1.0
+langchain-google-genai>=1.0.0
+google-generativeai>=0.3.0
+langchain-community>=0.0.20
+
+# Data and utilities
+numpy>=1.24.0
+pydantic>=2.0.0
+tqdm>=4.65.0
+
+# Vector store (for RAG baseline)
+faiss-cpu>=1.7.4
+
+# Optional for future extensions
+python-dotenv>=1.0.0
+
+datasets>=2.0.0
+pyarrow>=11.0.0

@@ -1,0 +1,6 @@
+Method,Long-Horizon QA,Multi-Session Continuity,Hallucination Rate
+vanilla,40.0000,16.0000,0.416450
+rag,60.0000,28.0000,0.358509
+episodic,40.0000,26.0000,0.470958
+summarization,60.0000,24.0000,0.261932
+sleep,60.0000,32.0000,0.836528

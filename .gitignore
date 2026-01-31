@@ -1,0 +1,6 @@
+.env
+LOCOMO/
+PERSONACHAT/
+PERSONAMEM/
+__pycache__/
+*.pyc

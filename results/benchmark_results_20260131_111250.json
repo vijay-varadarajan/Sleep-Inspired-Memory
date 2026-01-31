@@ -1,0 +1,77 @@
+{
+  "timestamp": "20260131_111250",
+  "split": "benchmark",
+  "num_samples": 25,
+  "methods": [
+    "vanilla",
+    "rag",
+    "episodic",
+    "summarization",
+    "sleep"
+  ],
+  "table1": [
+    {
+      "method": "vanilla",
+      "long_horizon_qa": 40.0,
+      "multi_session_continuity": 16.0,
+      "hallucination_rate": 0.41644976574700676,
+      "num_qa_samples": 5,
+      "num_continuity_samples": 5,
+      "num_hallucination_samples": 5
+    },
+    {
+      "method": "rag",
+      "long_horizon_qa": 60.0,
+      "multi_session_continuity": 27.999999999999996,
+      "hallucination_rate": 0.35850860420650094,
+      "num_qa_samples": 5,
+      "num_continuity_samples": 5,
+      "num_hallucination_samples": 5
+    },
+    {
+      "method": "episodic",
+      "long_horizon_qa": 40.0,
+      "multi_session_continuity": 26.0,
+      "hallucination_rate": 0.47095761381475665,
+      "num_qa_samples": 5,
+      "num_continuity_samples": 5,
+      "num_hallucination_samples": 5
+    },
+    {
+      "method": "summarization",
+      "long_horizon_qa": 60.0,
+      "multi_session_continuity": 24.0,
+      "hallucination_rate": 0.2619324796274738,
+      "num_qa_samples": 5,
+      "num_continuity_samples": 5,
+      "num_hallucination_samples": 5
+    },
+    {
+      "method": "sleep",
+      "long_horizon_qa": 60.0,
+      "multi_session_continuity": 32.0,
+      "hallucination_rate": 0.8365284071104914,
+      "num_qa_samples": 5,
+      "num_continuity_samples": 5,
+      "num_hallucination_samples": 5
+    }
+  ],
+  "table2": [
+    {
+      "method": "sleep",
+      "applicable": true,
+      "delayed_recall_pre": 90.0,
+      "delayed_recall_post": 15.0,
+      "delayed_recall_improvement": -75.0,
+      "cue_based_pre": 25.0,
+      "cue_based_post": 10.0,
+      "cue_based_improvement": -15.0,
+      "integration_pre": 100.0,
+      "integration_post": 100.0,
+      "integration_improvement": 0.0,
+      "schema_util_pre": 80.0,
+      "schema_util_post": 85.0,
+      "schema_util_improvement": 5.0
+    }
+  ]
+}
