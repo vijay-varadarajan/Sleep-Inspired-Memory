@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleep-Inspired Memory System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Left Side: Chat Interface -->
+        <div class="chat-panel" id="chatPanel">
+            <div class="chat-header">
+                <h1>Memory Agent</h1>
+                <p class="subtitle">Sleep-Inspired AI System</p>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="welcome-message">
+                    <h2>Welcome!</h2>
+                    <p>Start a conversation to see the memory system in action.</p>
+                </div>
+            </div>
+            
+            <div class="chat-input-container">
+                <form id="chatForm">
+                    <input 
+                        type="text" 
+                        id="chatInput" 
+                        placeholder="Type your message here..." 
+                        autocomplete="off"
+                        required
+                    >
+                    <button type="submit" id="sendButton">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Resizable Divider -->
+        <div class="divider" id="divider"></div>
+
+        <!-- Right Side: Memory & Sleep Visualization -->
+        <div class="memory-panel" id="memoryPanel">
+            <div class="memory-header">
+                <h2>System Status</h2>
+                <button id="triggerSleepBtn" class="trigger-btn">Trigger Sleep Cycle</button>
+            </div>
+
+            <!-- Sleep Process Visualization -->
+            <div class="sleep-status-container">
+                <h3>Sleep Cycle Status</h3>
+                <div class="sleep-status" id="sleepStatus">
+                    <div class="status-item">
+                        <span class="status-label">Stage:</span>
+                        <span class="status-value" id="sleepStage">Idle</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Progress:</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="status-details" id="sleepDetails">
+                        Awaiting sleep cycle trigger
+                    </div>
+                </div>
+
+                <!-- Sleep Stages Indicator -->
+                <div class="sleep-stages">
+                    <div class="stage-item" data-stage="compression">
+                        <div class="stage-icon">🗜️</div>
+                        <div class="stage-name">Compression</div>
+                    </div>
+                    <div class="stage-item" data-stage="consolidation">
+                        <div class="stage-icon">🔄</div>
+                        <div class="stage-name">Consolidation</div>
+                    </div>
+                    <div class="stage-item" data-stage="replay">
+                        <div class="stage-icon">▶️</div>
+                        <div class="stage-name">Replay</div>
+                    </div>
+                    <div class="stage-item" data-stage="decay">
+                        <div class="stage-icon">⏳</div>
+                        <div class="stage-name">Decay</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Memory Tabs -->
+            <div class="memory-tabs-container">
+                <div class="tabs">
+                    <button class="tab active" data-tab="episodic">Episodic Memory</button>
+                    <button class="tab" data-tab="consolidated">Consolidated Memory</button>
+                    <button class="tab" data-tab="schema">Schema Memory</button>
+                </div>
+
+                <!-- Episodic Memory Tab -->
+                <div class="tab-content active" id="episodic-content">
+                    <div class="memory-list" id="episodicMemoryList">
+                        <div class="loading">Loading episodic memories...</div>
+                    </div>
+                </div>
+
+                <!-- Consolidated Memory Tab -->
+                <div class="tab-content" id="consolidated-content">
+                    <div class="memory-list" id="consolidatedMemoryList">
+                        <div class="loading">Loading consolidated memories...</div>
+                    </div>
+                </div>
+
+                <!-- Schema Memory Tab -->
+                <div class="tab-content" id="schema-content">
+                    <div class="memory-list" id="schemaMemoryList">
+                        <div class="loading">Loading schema memories...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
