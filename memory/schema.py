@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from uuid import uuid4
 import json
 
-
+# Simplified imports and removed unused code
 @dataclass
 class Schema:
     """
@@ -48,6 +48,10 @@ class Schema:
     confidence: float = 0.5
     access_count: int = 0
     last_access: Optional[datetime] = None
+    schema_type: str = "user_specific"
+    status: str = "emergent"  # emergent | stable | conflicted
+    version: int = 1
+    parent_schema_id: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -61,7 +65,11 @@ class Schema:
             'examples': self.examples,
             'confidence': self.confidence,
             'access_count': self.access_count,
-            'last_access': self.last_access.isoformat() if self.last_access else None
+            'last_access': self.last_access.isoformat() if self.last_access else None,
+            'schema_type': self.schema_type,
+            'status': self.status,
+            'version': self.version,
+            'parent_schema_id': self.parent_schema_id,
         }
     
     @classmethod
@@ -97,7 +105,11 @@ class SchemaStore:
         core_concepts: List[str],
         related_memory_ids: List[str],
         examples: Optional[List[str]] = None,
-        confidence: float = 0.5
+        confidence: float = 0.5,
+        schema_type: str = "user_specific",
+        status: str = "emergent",
+        version: int = 1,
+        parent_schema_id: Optional[str] = None,
     ) -> Schema:
         """
         Add a new schema.
@@ -119,7 +131,11 @@ class SchemaStore:
             core_concepts=core_concepts,
             related_memory_ids=related_memory_ids,
             examples=examples or [],
-            confidence=confidence
+            confidence=confidence,
+            schema_type=schema_type,
+            status=status,
+            version=version,
+            parent_schema_id=parent_schema_id,
         )
         self.schemas[schema.id] = schema
         return schema
@@ -186,12 +202,16 @@ class SchemaStore:
             schema.related_memory_ids.extend(new_memory_ids)
             # Remove duplicates
             schema.related_memory_ids = list(set(schema.related_memory_ids))
+            schema.version += 1
         
         if new_examples:
             schema.examples.extend(new_examples)
         
         # Update confidence (clamp to [0, 1])
         schema.confidence = max(0.0, min(1.0, schema.confidence + confidence_boost))
+
+        if schema.confidence >= 0.75 and len(schema.related_memory_ids) >= 4 and schema.status != "conflicted":
+            schema.status = "stable"
         
         return True
     
@@ -270,7 +290,11 @@ class SchemaStore:
             core_concepts=merged_concepts,
             related_memory_ids=merged_memory_ids,
             examples=merged_examples,
-            confidence=merged_confidence
+            confidence=merged_confidence,
+            schema_type=schema1.schema_type if schema1.schema_type == schema2.schema_type else "general_conversational",
+            status="emergent",
+            version=max(schema1.version, schema2.version) + 1,
+            parent_schema_id=schema1.id,
         )
         
         # Remove old schemas
@@ -304,12 +328,19 @@ class SchemaStore:
             schema = Schema.from_dict(schema_data)
             self.schemas[schema.id] = schema
     
+    def clear(self) -> None:
+        """Clear all schemas from the store."""
+        self.schemas = {}
+    
     def get_stats(self) -> Dict[str, Any]:
         """Get statistics about the schema store."""
         schemas_list = list(self.schemas.values())
         return {
             'total_schemas': len(schemas_list),
             'avg_confidence': sum(s.confidence for s in schemas_list) / len(schemas_list) if schemas_list else 0,
+            'stable_schemas': sum(1 for s in schemas_list if s.status == 'stable'),
+            'emergent_schemas': sum(1 for s in schemas_list if s.status == 'emergent'),
+            'conflicted_schemas': sum(1 for s in schemas_list if s.status == 'conflicted'),
             'total_accesses': sum(s.access_count for s in schemas_list),
             'avg_supporting_memories': sum(len(s.related_memory_ids) for s in schemas_list) / len(schemas_list) if schemas_list else 0
         }

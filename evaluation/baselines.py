@@ -25,6 +25,8 @@ from memory.schema import SchemaStore
 from sleep.consolidation import SleepCycle
 from sleep.compression import MemoryCompressor
 from agent.agent import MemoryAgent
+from memory.config import AblationConfig, DatasetMemoryConfig, resolve_dataset_config
+from utils.api_counter import increment_llm_call
 
 
 class VanillaLLM:
@@ -68,8 +70,20 @@ class VanillaLLM:
             HumanMessage(content=user_input)
         ]
         
+        increment_llm_call("baseline_vanilla")
         response = self.llm.invoke(messages)
-        return response.content
+        
+        # Handle different response formats
+        if isinstance(response.content, list):
+            # Extract text from list of content blocks
+            response_text = "".join(
+                block.get('text', '') if isinstance(block, dict) else str(block)
+                for block in response.content
+            )
+        else:
+            response_text = str(response.content)
+        
+        return response_text
     
     def get_memory_summary(self) -> Dict[str, Any]:
         """Get memory summary (empty for vanilla)."""
@@ -152,8 +166,17 @@ class RAGBaseline:
             HumanMessage(content=user_input)
         ]
         
+        increment_llm_call("baseline_rag")
         response = self.llm.invoke(messages)
-        response_text = response.content
+        
+        # Handle different response formats
+        if isinstance(response.content, list):
+            response_text = "".join(
+                block.get('text', '') if isinstance(block, dict) else str(block)
+                for block in response.content
+            )
+        else:
+            response_text = str(response.content)
         
         # Store interaction in vector store
         interaction_text = f"User: {user_input}\nAssistant: {response_text}"
@@ -244,8 +267,17 @@ class EpisodicOnlyAgent:
             HumanMessage(content=user_input)
         ]
         
+        increment_llm_call("baseline_episodic")
         response = self.llm.invoke(messages)
-        response_text = response.content
+        
+        # Handle different response formats
+        if isinstance(response.content, list):
+            response_text = "".join(
+                block.get('text', '') if isinstance(block, dict) else str(block)
+                for block in response.content
+            )
+        else:
+            response_text = str(response.content)
         
         # Store as episodic memory
         interaction_text = f"User: {user_input}\nAssistant: {response_text}"
@@ -314,6 +346,7 @@ class EpisodicSummarizationAgent:
 Provide a brief summary capturing the key points and topics discussed."""
         
         try:
+            increment_llm_call("baseline_summarization")
             result = self.llm.invoke([HumanMessage(content=prompt)])
             summary = result.content
             self.summaries.append(summary)
@@ -376,8 +409,17 @@ Provide a brief summary capturing the key points and topics discussed."""
             HumanMessage(content=user_input)
         ]
         
+        increment_llm_call("baseline_summarization")
         response = self.llm.invoke(messages)
-        response_text = response.content
+        
+        # Handle different response formats
+        if isinstance(response.content, list):
+            response_text = "".join(
+                block.get('text', '') if isinstance(block, dict) else str(block)
+                for block in response.content
+            )
+        else:
+            response_text = str(response.content)
         
         # Store as episodic memory
         interaction_text = f"User: {user_input}\nAssistant: {response_text}"
@@ -419,14 +461,18 @@ class SleepConsolidatedAgent(MemoryAgent):
         self,
         api_key: Optional[str] = None,
         model_name: str = "gemini-flash-latest",
-        auto_sleep_threshold: int = 10
+        auto_sleep_threshold: int = 10,
+        dataset_name: str = "personamem",
+        memory_config: Optional[DatasetMemoryConfig] = None,
     ):
         """Initialize sleep-consolidated agent."""
         super().__init__(
             api_key=api_key,
             model_name=model_name,
             temperature=0.7,
-            auto_sleep_threshold=auto_sleep_threshold
+            auto_sleep_threshold=auto_sleep_threshold,
+            dataset_name=dataset_name,
+            memory_config=memory_config,
         )
     
     def sleep(self, verbose: bool = False) -> Dict[str, Any]:
@@ -434,7 +480,13 @@ class SleepConsolidatedAgent(MemoryAgent):
         return super().sleep(verbose=verbose)
 
 
-def create_agent(method: str, api_key: Optional[str] = None) -> Any:
+def create_agent(
+    method: str,
+    api_key: Optional[str] = None,
+    dataset_name: str = "personamem",
+    config_overrides: Optional[Dict[str, Any]] = None,
+    ablation_flags: Optional[Dict[str, bool]] = None,
+) -> Any:
     """
     Factory function to create agents of different types.
     
@@ -445,6 +497,9 @@ def create_agent(method: str, api_key: Optional[str] = None) -> Any:
     Returns:
         Agent instance
     """
+    ablations = AblationConfig(**(ablation_flags or {}))
+    memory_cfg = resolve_dataset_config(dataset_name=dataset_name, overrides=config_overrides, ablations=ablations)
+
     if method == 'vanilla':
         return VanillaLLM(api_key=api_key)
     elif method == 'rag':
@@ -454,6 +509,13 @@ def create_agent(method: str, api_key: Optional[str] = None) -> Any:
     elif method == 'summarization':
         return EpisodicSummarizationAgent(api_key=api_key)
     elif method == 'sleep':
-        return SleepConsolidatedAgent(api_key=api_key)
+        if ablations.no_sleep:
+            return EpisodicOnlyAgent(api_key=api_key)
+        if ablations.episodic_only:
+            return EpisodicOnlyAgent(api_key=api_key)
+        if ablations.summarization_only:
+            return EpisodicSummarizationAgent(api_key=api_key)
+
+        return SleepConsolidatedAgent(api_key=api_key, dataset_name=dataset_name, memory_config=memory_cfg)
     else:
         raise ValueError(f"Unknown method: {method}")

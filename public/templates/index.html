@@ -47,7 +47,10 @@
         <div class="memory-panel" id="memoryPanel">
             <div class="memory-header">
                 <h2>System Status</h2>
-                <button id="triggerSleepBtn" class="trigger-btn">Trigger Sleep Cycle</button>
+                <div class="header-buttons">
+                    <button id="triggerSleepBtn" class="trigger-btn">Trigger Sleep Cycle</button>
+                    <button id="resetMemoryBtn" class="reset-btn">Reset Memory</button>
+                </div>
             </div>
 
             <!-- Sleep Process Visualization -->
@@ -64,28 +67,24 @@
                             <div class="progress-fill" id="progressFill" style="width: 0%"></div>
                         </div>
                     </div>
+                    <div class="status-item">
+                        <span class="status-label">Episodes:</span>
+                        <span class="status-value" id="episodeCount">0 / 0</span>
+                    </div>
                     <div class="status-details" id="sleepDetails">
                         Awaiting sleep cycle trigger
                     </div>
                 </div>
+            </div>
 
-                <!-- Sleep Stages Indicator -->
-                <div class="sleep-stages">
-                    <div class="stage-item" data-stage="compression">
-                        <div class="stage-icon">🗜️</div>
-                        <div class="stage-name">Compression</div>
-                    </div>
-                    <div class="stage-item" data-stage="consolidation">
-                        <div class="stage-icon">🔄</div>
-                        <div class="stage-name">Consolidation</div>
-                    </div>
-                    <div class="stage-item" data-stage="replay">
-                        <div class="stage-icon">▶️</div>
-                        <div class="stage-name">Replay</div>
-                    </div>
-                    <div class="stage-item" data-stage="decay">
-                        <div class="stage-icon">⏳</div>
-                        <div class="stage-name">Decay</div>
+            <!-- Process Log Container -->
+            <div class="process-log-container">
+                <h3>Process Log <span class="log-badge" id="logBadge">0</span></h3>
+                <div class="process-log" id="processLog">
+                    <div class="log-entry log-init">
+                        <span class="log-time">--:--:--</span>
+                        <span class="log-icon">ℹ️</span>
+                        <span class="log-message">Awaiting first interaction...</span>
                     </div>
                 </div>
             </div>

@@ -18,11 +18,13 @@ import os
 import json
 from dataclasses import dataclass
 
+# Simplified imports and removed unused code
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from memory.episodic import Episode
+from utils.api_counter import increment_llm_call
 
 
 @dataclass
@@ -42,6 +44,21 @@ class CompressionResult:
     themes: List[str]
     relationships: List[str]
     confidence: float = 0.7
+
+
+@dataclass
+class StructuredMemoryRecord:
+    """Structured consolidated object used for research-grade memory analysis."""
+
+    core_fact: str
+    supporting_context: str
+    confidence: float
+    time_span: str
+    persona_link: str
+    evidence_link: str
+    contradiction_flags: List[str]
+    schema_label: str
+    memory_type: str
 
 
 class MemoryCompressor:
@@ -131,6 +148,7 @@ RELATIONSHIPS: [relationship1; relationship2; ...]
                 SystemMessage(content="You are an expert at memory consolidation and information compression."),
                 HumanMessage(content=prompt)
             ]
+            increment_llm_call("compression_single")
             response = self.llm.invoke(messages)
             
             # Parse response
@@ -147,6 +165,85 @@ RELATIONSHIPS: [relationship1; relationship2; ...]
                 relationships=[],
                 confidence=0.3
             )
+
+    def extract_structured_record(self, episode: Episode, compression: CompressionResult) -> StructuredMemoryRecord:
+        """Create structured consolidated memory record from one episode + compression."""
+        ctx = episode.context or {}
+        persona = self._ensure_text(ctx.get("persona", ""))
+        evidence_link = self._ensure_text(ctx.get("evidence_link", ""))
+        source_time = self._ensure_text(ctx.get("time_span", "")) or episode.timestamp.isoformat()
+
+        # Heuristic type fallback if not provided by encoding stage.
+        memory_type = self._ensure_text(ctx.get("episode_type", "")).lower() or "mixed"
+        if memory_type == "mixed":
+            text_l = episode.content.lower()
+            if any(w in text_l for w in ["prefer", "like", "dislike", "favorite"]):
+                memory_type = "preference"
+            elif any(w in text_l for w in ["when", "where", "date", "time"]):
+                memory_type = "fact"
+            elif any(w in text_l for w in ["happened", "went", "met", "event"]):
+                memory_type = "event"
+
+        contradiction_flags = list(episode.contradiction_flags or [])
+        if episode.factuality_risk > 0.7 and evidence_link == "":
+            contradiction_flags.append("high_factuality_risk_without_evidence")
+
+        return StructuredMemoryRecord(
+            core_fact=(compression.summary.split(".")[0].strip() if compression.summary else episode.content[:140]),
+            supporting_context=episode.content[:500],
+            confidence=max(0.0, min(1.0, 0.5 * compression.confidence + 0.5 * episode.confidence)),
+            time_span=source_time,
+            persona_link=persona,
+            evidence_link=evidence_link,
+            contradiction_flags=contradiction_flags,
+            schema_label=(compression.themes[0] if compression.themes else "general"),
+            memory_type=memory_type,
+        )
+
+    def extract_structured_record_batch(
+        self,
+        episodes: List[Episode],
+        compression: CompressionResult,
+    ) -> StructuredMemoryRecord:
+        """Create structured consolidated record from a replay batch."""
+        if not episodes:
+            return StructuredMemoryRecord(
+                core_fact="",
+                supporting_context="",
+                confidence=0.0,
+                time_span="",
+                persona_link="",
+                evidence_link="",
+                contradiction_flags=[],
+                schema_label="general",
+                memory_type="mixed",
+            )
+
+        personas = []
+        contradictions = []
+        evidence = []
+        for ep in episodes:
+            ctx = ep.context or {}
+            p = self._ensure_text(ctx.get("persona", ""))
+            if p:
+                personas.append(p)
+            ev = self._ensure_text(ctx.get("evidence_link", ""))
+            if ev:
+                evidence.append(ev)
+            contradictions.extend(ep.contradiction_flags or [])
+
+        ts = f"{min(ep.timestamp for ep in episodes).isoformat()} to {max(ep.timestamp for ep in episodes).isoformat()}"
+        return StructuredMemoryRecord(
+            core_fact=(compression.summary.split(".")[0].strip() if compression.summary else episodes[0].content[:140]),
+            supporting_context="\n".join(ep.content[:180] for ep in episodes[:5]),
+            confidence=max(0.0, min(1.0, compression.confidence)),
+            time_span=ts,
+            persona_link=personas[0] if personas else "",
+            evidence_link=evidence[0] if evidence else "",
+            contradiction_flags=list(dict.fromkeys(contradictions)),
+            schema_label=(compression.themes[0] if compression.themes else "general"),
+            memory_type="mixed",
+        )
     
     def compress_episode_batch(
         self,
@@ -218,6 +315,7 @@ RELATIONSHIPS: [relationship1; relationship2; ...]
                 SystemMessage(content="You are an expert at memory consolidation, integration, and pattern recognition."),
                 HumanMessage(content=prompt)
             ]
+            increment_llm_call("compression_batch")
             response = self.llm.invoke(messages)
             
             result = self._parse_compression_response(self._ensure_text(response.content))
@@ -237,6 +335,14 @@ RELATIONSHIPS: [relationship1; relationship2; ...]
                 relationships=[],
                 confidence=0.3
             )
+
+    def compress_batch_episodes(
+        self,
+        episodes: List[Episode],
+        find_commonalities: bool = True,
+    ) -> CompressionResult:
+        """Backward-compatible alias used by consolidation pipeline."""
+        return self.compress_episode_batch(episodes=episodes, find_commonalities=find_commonalities)
     
     def extract_concepts_from_text(self, text: str) -> List[str]:
         """
@@ -261,6 +367,7 @@ Concepts:"""
         
         try:
             messages = [HumanMessage(content=prompt)]
+            increment_llm_call("compression_concepts")
             response = self.llm.invoke(messages)
             
             # Parse comma-separated list

@@ -1,0 +1,2 @@
+Method,Long-Horizon QA,Multi-Session Continuity,Hallucination Rate,Answer Utility,Retrieval Recall@3,Retrieval MRR,Retrieval nDCG@5,Evidence Hit Rate,Fact Retention,Preference Retention,Contradiction Rate,Unsupported Claim Proportion,High-Risk Factual Hallucinations,Avg Runtime/Turn (ms)
+sleep,0.0000,50.0000,0.000000,10.7310,0.0000,0.0000,0.0000,0.0000,0.6059,1.0000,0.0000,0.1717,0.0000,12856.6675

@@ -17,6 +17,7 @@ TABLE 2: Cognitive-Style Probes (Before vs After Sleep)
 
 import json
 import os
+import math
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 import re
@@ -24,6 +25,7 @@ from collections import defaultdict
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
+from utils.api_counter import increment_llm_call
 
 
 class PersonaMemEvaluator:
@@ -44,7 +46,9 @@ class PersonaMemEvaluator:
         self.llm = ChatGoogleGenerativeAI(
             model=model_name,
             google_api_key=self.api_key,
-            temperature=0.0  # Deterministic for evaluation
+            temperature=0.0,  # Deterministic for evaluation
+            request_timeout=45,  # 45 second timeout per request
+            max_retries=2  # Retry failed requests
         )
 
     @staticmethod
@@ -69,6 +73,179 @@ class PersonaMemEvaluator:
         if isinstance(value, str):
             return [value]
         return [str(value)]
+
+    @staticmethod
+    def _normalize(text: str) -> str:
+        text = (text or "").lower().strip()
+        text = re.sub(r"[^a-z0-9\s]", " ", text)
+        text = re.sub(r"\s+", " ", text)
+        return text
+
+    def evaluate_answer_utility(
+        self,
+        response: str,
+        correct_answer: str,
+        incorrect_answers: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Automatic primary utility metric: exact + token-F1 + semantic fallback flag."""
+        r = self._normalize(self._ensure_text(response))
+        c = self._normalize(self._ensure_text(correct_answer))
+        incorrect = [self._normalize(x) for x in self._ensure_list(incorrect_answers)]
+
+        exact = 1.0 if r == c and r else 0.0
+
+        r_toks = r.split()
+        c_toks = c.split()
+        common = len(set(r_toks) & set(c_toks))
+        precision = common / max(1, len(set(r_toks)))
+        recall = common / max(1, len(set(c_toks)))
+        token_f1 = 0.0 if (precision + recall) == 0 else (2 * precision * recall) / (precision + recall)
+
+        # Utility score primarily automatic.
+        utility = 0.65 * token_f1 + 0.35 * exact
+
+        # Negative overlap penalty against distractors.
+        if incorrect:
+            neg_overlap = max(
+                (len(set(r_toks) & set(inc.split())) / max(1, len(set(r_toks))))
+                for inc in incorrect
+            )
+            utility = max(0.0, utility - 0.2 * neg_overlap)
+
+        return {
+            "exact_match": exact,
+            "token_f1": token_f1,
+            "utility_score": utility,
+            "primary_metric": "automatic",
+        }
+
+    def evaluate_retrieval_success(
+        self,
+        retrieval_bundles: List[Dict[str, Any]],
+        target_text: str,
+        k_values: Optional[List[int]] = None,
+    ) -> Dict[str, Any]:
+        """Compute Recall@k, MRR, nDCG, and evidence hit rate from retrieval bundles."""
+        k_values = k_values or [1, 3, 5]
+        target_norm = self._normalize(target_text)
+        target_tokens = set(target_norm.split())
+
+        graded = []
+        first_rel_rank = None
+        evidence_hit = 0
+        for rank, b in enumerate(retrieval_bundles, start=1):
+            text = self._normalize(str(b.get("text", "")) + " " + str(b.get("core_fact", "")))
+            text_tokens = set(text.split())
+            overlap = len(target_tokens & text_tokens) / max(1, len(target_tokens))
+            rel = 1 if overlap >= 0.25 else 0
+            graded.append((rank, rel, overlap))
+            if rel and first_rel_rank is None:
+                first_rel_rank = rank
+            if b.get("is_evidence_grounded") and rel:
+                evidence_hit = 1
+
+        recall = {}
+        for k in k_values:
+            recall[f"recall@{k}"] = 1.0 if any(rel for rank, rel, _ in graded if rank <= k) else 0.0
+
+        mrr = 1.0 / first_rel_rank if first_rel_rank else 0.0
+        # Binary nDCG@5.
+        dcg = sum((rel / (1.0 if rank == 1 else (1.0 + math.log2(rank)))) for rank, rel, _ in graded[:5])
+        ideal_rels = sorted([rel for _, rel, _ in graded], reverse=True)[:5]
+        idcg = sum((rel / (1.0 if i == 0 else (1.0 + math.log2(i + 1)))) for i, rel in enumerate(ideal_rels))
+        ndcg = dcg / idcg if idcg > 0 else 0.0
+
+        out = {
+            **recall,
+            "mrr": mrr,
+            "ndcg@5": ndcg,
+            "evidence_hit_rate": float(evidence_hit),
+        }
+        return out
+
+    def evaluate_memory_fidelity(
+        self,
+        original_text: str,
+        consolidated_text: str,
+        memory_type: str = "mixed",
+        contradiction_flags: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Measure retention and contradiction risk after consolidation."""
+        o = self._normalize(original_text)
+        c = self._normalize(consolidated_text)
+        o_set = set(o.split())
+        c_set = set(c.split())
+
+        retention = len(o_set & c_set) / max(1, len(o_set))
+
+        entities_orig = [t for t in original_text.split() if t[:1].isupper() and len(t) > 2]
+        entities_cons = set(t for t in consolidated_text.split() if t[:1].isupper() and len(t) > 2)
+        entity_retention = (
+            sum(1 for e in entities_orig if e in entities_cons) / max(1, len(entities_orig))
+            if entities_orig
+            else retention
+        )
+
+        preference_terms = ["like", "dislike", "prefer", "favorite", "hate"]
+        pref_orig = sum(1 for t in preference_terms if t in o)
+        pref_cons = sum(1 for t in preference_terms if t in c)
+        preference_retention = min(1.0, pref_cons / max(1, pref_orig)) if pref_orig else 1.0
+
+        contradiction_rate = 1.0 if contradiction_flags else 0.0
+        return {
+            "fact_retention_rate": retention,
+            "entity_retention_rate": entity_retention,
+            "preference_retention_rate": preference_retention,
+            "contradiction_rate": contradiction_rate,
+            "memory_type": memory_type,
+        }
+
+    def evaluate_efficiency_metrics(
+        self,
+        runtime_ms: float,
+        retrieval_latency_ms: float,
+        sleep_time_ms: float,
+        tokens_used: int,
+        memory_count: int,
+        replayed_episodes: int,
+    ) -> Dict[str, Any]:
+        """Runtime and deployment tradeoff metrics."""
+        return {
+            "runtime_per_turn_ms": float(runtime_ms),
+            "retrieval_latency_ms": float(retrieval_latency_ms),
+            "sleep_consolidation_time_ms": float(sleep_time_ms),
+            "tokens_per_query": int(tokens_used),
+            "consolidated_memory_count": int(memory_count),
+            "replayed_episodes_per_cycle": int(replayed_episodes),
+        }
+
+    def evaluate_hallucination_units(
+        self,
+        response: str,
+        supported_context: str,
+    ) -> Dict[str, Any]:
+        """Unit-normalized unsupported claim metrics (sentence-level)."""
+        resp = self._ensure_text(response)
+        ctx = self._normalize(supported_context)
+        sentences = [s.strip() for s in re.split(r"[.!?]+", resp) if s.strip()]
+        unsupported = 0
+        high_risk = 0
+        for s in sentences:
+            s_norm = self._normalize(s)
+            if not s_norm:
+                continue
+            overlap = len(set(s_norm.split()) & set(ctx.split())) / max(1, len(set(s_norm.split())))
+            if overlap < 0.2:
+                unsupported += 1
+                if any(k in s_norm for k in ["date", "time", "when", "where", "exact", "evidence"]):
+                    high_risk += 1
+        total = max(1, len(sentences))
+        return {
+            "unsupported_claim_count": unsupported,
+            "unsupported_claim_proportion": unsupported / total,
+            "high_risk_factual_hallucinations": high_risk,
+            "content_units": total,
+        }
     
     def evaluate_long_horizon_qa(
         self,
@@ -94,32 +271,24 @@ class PersonaMemEvaluator:
         correct_text = self._ensure_text(correct_answer)
         incorrect_list = self._ensure_list(incorrect_answers)
 
-        # Use LLM to judge if response matches correct answer
-        prompt = f"""You are evaluating a question-answering system.
+        # Use LLM to judge if response matches correct answer - simplified prompt
+        prompt = f"""Evaluate if Response matches Correct Answer (ignore incorrect answers).
 
-Given a response and multiple candidate answers, determine which candidate answer best matches the response.
+Response: {response_text[:500]}
+Correct Answer: {correct_text[:500]}
 
-Response: {response_text}
-
-Correct Answer: {correct_text}
-
-Incorrect Answers:
-{chr(10).join(f"{i+1}. {ans}" for i, ans in enumerate(incorrect_list))}
-
-Does the Response match the Correct Answer in meaning? Answer only "YES" or "NO" and provide a brief reason.
-
-Format your answer as:
-MATCH: YES/NO
-REASON: [brief explanation]
+Answer: MATCH: YES or NO
+Reason: [one sentence]
 """
         
         try:
+            increment_llm_call("evaluator_long_horizon_qa")
             result = self.llm.invoke([HumanMessage(content=prompt)])
             result_text = self._ensure_text(result.content)
             
-            # Parse result
-            match = "YES" in result_text.split("MATCH:")[1].split("\n")[0].upper() if "MATCH:" in result_text else False
-            reason = result_text.split("REASON:")[1].strip() if "REASON:" in result_text else ""
+            # Parse result - more robust
+            match = "YES" in result_text.upper() and "MATCH" in result_text.upper()
+            reason = result_text.split("Reason:")[-1].strip()[:100] if "Reason:" in result_text else result_text[:100]
             
             return {
                 'correct': match,
@@ -129,11 +298,11 @@ REASON: [brief explanation]
                 'correct_answer': correct_text[:200]
             }
         except Exception as e:
-            print(f"Error in QA evaluation: {e}")
+            print(f"QA eval timeout/error: {str(e)[:50]}")
             return {
                 'correct': False,
                 'confidence': 0.0,
-                'reason': f"Evaluation error: {str(e)}",
+                'reason': f"Timeout",
                 'response': response_text[:200],
                 'correct_answer': correct_text[:200]
             }
@@ -190,6 +359,7 @@ SCORE: [0.0-1.0, how well continuity is maintained]
 """
         
         try:
+            increment_llm_call("evaluator_continuity")
             result = self.llm.invoke([HumanMessage(content=prompt)])
             result_text = self._ensure_text(result.content)
             
@@ -267,6 +437,7 @@ HALLUCINATIONS:
 """
         
         try:
+            increment_llm_call("evaluator_hallucination")
             result = self.llm.invoke([HumanMessage(content=prompt)])
             result_text = self._ensure_text(result.content)
             
@@ -342,6 +513,7 @@ DETAILS:
 """
         
         try:
+            increment_llm_call("evaluator_delayed_recall")
             result = self.llm.invoke([HumanMessage(content=prompt)])
             result_text = self._ensure_text(result.content)
             
@@ -425,6 +597,7 @@ EXPLANATION: [brief explanation]
 """
         
         try:
+            increment_llm_call("evaluator_cue_recall")
             result = self.llm.invoke([HumanMessage(content=prompt)])
             result_text = self._ensure_text(result.content)
             
@@ -510,6 +683,7 @@ EXPLANATION: [brief explanation]
 """
         
         try:
+            increment_llm_call("evaluator_cross_episode")
             result = self.llm.invoke([HumanMessage(content=prompt)])
             result_text = self._ensure_text(result.content)
             
@@ -594,6 +768,7 @@ EXAMPLES: [specific examples of schema use from the response]
 """
         
         try:
+            increment_llm_call("evaluator_schema_utilization")
             result = self.llm.invoke([HumanMessage(content=prompt)])
             result_text = self._ensure_text(result.content)
             

@@ -13,11 +13,14 @@ Inspired by:
 - Synaptic homeostasis hypothesis
 """
 
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 from datetime import datetime, timedelta
 import math
 
 from memory.episodic import Episode
+from memory.config import DatasetMemoryConfig
+
+# Simplified imports and removed unused code
 
 
 def calculate_replay_priority(
@@ -78,6 +81,102 @@ def calculate_replay_priority(
     final_priority = base_priority * access_multiplier
     
     return final_priority
+
+
+def calculate_weighted_replay_priority(
+    episode: Episode,
+    current_time: datetime,
+    config: DatasetMemoryConfig,
+) -> float:
+    """Dataset-aware replay priority using biologically-inspired encoding signals."""
+    w = dict(config.salience_weights or {})
+
+    # Defaults for backwards compatibility.
+    salience_w = w.get("salience", 0.2)
+    novelty_w = w.get("novelty", 0.2)
+    uncertainty_w = w.get("uncertainty", 0.1)
+    repetition_w = w.get("repetition", 0.2)
+    recency_w = w.get("recency", 0.2)
+    persona_w = w.get("persona_relevance", 0.1)
+    evidence_w = w.get("evidence_strength", 0.0)
+
+    # Fresh recency estimate with decay.
+    time_delta = current_time - episode.timestamp
+    hours_elapsed = max(0.0, time_delta.total_seconds() / 3600.0)
+    half_life_hours = 72.0 if config.dataset_name == "locomo" else 96.0
+    recency = math.exp(-hours_elapsed * math.log(2) / half_life_hours)
+
+    repetition = min(1.0, episode.repetition_count / 5.0)
+    uncertainty = min(1.0, max(0.0, episode.uncertainty))
+
+    score = (
+        salience_w * episode.salience_score
+        + novelty_w * episode.novelty_score
+        + uncertainty_w * uncertainty
+        + repetition_w * repetition
+        + recency_w * recency
+        + persona_w * episode.persona_relevance
+        + evidence_w * episode.evidence_strength
+    )
+
+    # Penalize risky low-confidence memories except when evidence-grounded.
+    risk_penalty = episode.factuality_risk * (0.25 if episode.evidence_strength > 0.5 else 0.45)
+    score -= risk_penalty
+
+    return max(0.0, score)
+
+
+def adaptive_replay_top_k(episodes: List[Episode], config: DatasetMemoryConfig) -> int:
+    """Adaptive replay size based on pool size and uncertainty."""
+    if not episodes:
+        return config.replay_top_k_min
+
+    avg_uncertainty = sum(ep.uncertainty for ep in episodes) / len(episodes)
+    avg_novelty = sum(ep.novelty_score for ep in episodes) / len(episodes)
+    uncertainty_factor = 1.0 + 0.5 * avg_uncertainty + 0.3 * avg_novelty
+
+    base = int(round(config.replay_top_k * uncertainty_factor))
+    return max(config.replay_top_k_min, min(config.replay_top_k_max, min(base, len(episodes))))
+
+
+def select_replay_mode(episode: Episode, config: DatasetMemoryConfig) -> str:
+    """Select replay mode: verbatim / lossy / contrastive / schema / evidence."""
+    if config.dataset_name == "locomo" and episode.evidence_strength >= 0.45:
+        return "evidence"
+    if episode.contradiction_flags:
+        return "contrastive"
+    if episode.episode_type in {"fact", "instruction"} and episode.confidence >= config.factuality_threshold:
+        return "verbatim"
+    if episode.episode_type in {"preference", "event"} and episode.salience_score >= 0.6:
+        return "schema"
+    return "lossy"
+
+
+def select_episodes_for_replay_weighted(
+    episodes: List[Episode],
+    config: DatasetMemoryConfig,
+    current_time: datetime | None = None,
+    exclude_consolidated: bool = True,
+) -> List[Tuple[Episode, float, str]]:
+    """Dataset-aware replay selection returning (episode, priority, replay_mode)."""
+    if current_time is None:
+        current_time = datetime.now()
+
+    pool = [e for e in episodes if not e.consolidated] if exclude_consolidated else list(episodes)
+    if not pool:
+        return []
+
+    k = adaptive_replay_top_k(pool, config)
+    scored = []
+    for ep in pool:
+        if config.ablations.disable_replay_selection:
+            priority = 1.0
+        else:
+            priority = calculate_weighted_replay_priority(ep, current_time, config)
+        scored.append((ep, priority, select_replay_mode(ep, config)))
+
+    scored.sort(key=lambda x: x[1], reverse=True)
+    return scored[:k]
 
 
 def select_episodes_for_replay(

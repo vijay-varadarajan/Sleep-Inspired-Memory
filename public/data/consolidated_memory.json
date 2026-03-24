@@ -1,0 +1,115 @@
+[
+  {
+    "id": "10db7991-fecc-43f4-bfc0-c91c423a23fe",
+    "timestamp": "2026-02-08T13:14:06.267329",
+    "summary": "The fundamental difference between ballpoint and gel pens lies in their ink formulation: ballpoint pens use highly viscous, oil-based paste ink that dries quickly but requires more pressure, while gel pens use low-viscosity, water-based gel ink that provides a smoother, more vibrant writing experience but takes longer to dry and may smudge. The choice dictates the required writing pressure and the resulting color vibrancy and drying speed.",
+    "source_episode_ids": [
+      "701246a5-2549-4b88-b67f-94c3a265b6be"
+    ],
+    "key_concepts": [
+      "Ballpoint pen",
+      "Gel pen",
+      "Ink formulation",
+      "Oil-based paste ink",
+      "Water-based gel ink",
+      "Viscosity",
+      "Drying time",
+      "Writing pressure",
+      "Pigments",
+      "Smudging"
+    ],
+    "importance": 0.6,
+    "access_count": 0,
+    "last_access": null,
+    "tags": [
+      "Product comparison",
+      "Writing instruments",
+      "Ink technology",
+      "Material properties"
+    ],
+    "size": 949
+  },
+  {
+    "id": "ebc00c89-670a-4b6d-82cf-0d6f4990d24b",
+    "timestamp": "2026-02-08T13:13:47.119149",
+    "summary": "",
+    "source_episode_ids": [
+      "8b2a7669-ad94-4bf5-809a-f674fa428ad5"
+    ],
+    "key_concepts": [],
+    "importance": 0.5,
+    "access_count": 0,
+    "last_access": null,
+    "tags": [],
+    "size": 259
+  },
+  {
+    "id": "ed5a8fb8-d718-4632-a497-595ef8552662",
+    "timestamp": "2026-02-08T13:13:43.261514",
+    "summary": "",
+    "source_episode_ids": [
+      "650bd8b6-9183-4371-9d04-018b5254db9a"
+    ],
+    "key_concepts": [],
+    "importance": 0.5,
+    "access_count": 0,
+    "last_access": null,
+    "tags": [],
+    "size": 259
+  },
+  {
+    "id": "1059bd7c-aeef-4b0a-8e1e-537a617ee0a9",
+    "timestamp": "2026-02-08T13:13:39.481554",
+    "summary": "",
+    "source_episode_ids": [
+      "9babd547-f620-42db-b265-bc5b78e91e55"
+    ],
+    "key_concepts": [],
+    "importance": 0.5,
+    "access_count": 0,
+    "last_access": null,
+    "tags": [],
+    "size": 259
+  },
+  {
+    "id": "6d5d502a-9c46-44cb-aeb1-2d9bf5b46257",
+    "timestamp": "2026-02-08T13:13:35.184878",
+    "summary": "Feathers (quills) established the fundamental mechanism for controlled ink flow in writing instruments. The hollow shaft served as an ink reservoir, while a critical slit in the tip utilized capillary action to regulate steady ink delivery. Modern pen inventors replicated this successful reservoir and capillary system using durable materials like metal, leading directly to the fountain pen design.",
+    "source_episode_ids": [
+      "86c36355-7679-4286-9e4b-f70cb13f25d6"
+    ],
+    "key_concepts": [
+      "Feathers (Quills)",
+      "Controlled Ink Flow",
+      "Ink Reservoir",
+      "Slit",
+      "Capillary Action",
+      "Metal Nibs",
+      "Fountain Pen"
+    ],
+    "importance": 0.5,
+    "access_count": 0,
+    "last_access": null,
+    "tags": [
+      "Technological Inspiration",
+      "Mechanism Replication",
+      "Evolution of Writing Tools",
+      "Material Science Improvement"
+    ],
+    "size": 890
+  },
+  {
+    "id": "fb43aee6-5041-469d-be0a-eee2b3f5c05c",
+    "timestamp": "2026-02-08T13:13:31.701110",
+    "summary": "",
+    "source_episode_ids": [
+      "85ad2e45-9ba8-4926-a861-b80f9b96a9f0"
+    ],
+    "key_concepts": [],
+    "importance": 0.6,
+    "access_count": 0,
+    "last_access": null,
+    "tags": [],
+    "size": 259
+  }
+]

@@ -1,0 +1,73 @@
+{
+  "timestamp": "20260324_135343",
+  "dataset": "PERSONACHAT",
+  "split": "validation",
+  "num_samples": 30,
+  "methods": [
+    "sleep"
+  ],
+  "ablation_flags": {},
+  "prompt_version": "v2_structured_dataset_aware",
+  "sleep_configuration": {
+    "dataset_name": "personachat"
+  },
+  "retrieval_configuration": {
+    "type": "hybrid"
+  },
+  "api_counters": {
+    "llm_total": 304,
+    "llm::agent_generation": 61,
+    "llm::compression_concepts": 109,
+    "llm::evaluator_long_horizon_qa": 13,
+    "llm::evaluator_hallucination": 13,
+    "llm::evaluator_continuity": 8,
+    "llm::compression_batch": 15,
+    "llm::compression_single": 53,
+    "llm::evaluator_delayed_recall": 8,
+    "llm::evaluator_cue_recall": 8,
+    "llm::evaluator_cross_episode": 8,
+    "llm::evaluator_schema_utilization": 8
+  },
+  "table1": [
+    {
+      "method": "sleep",
+      "long_horizon_qa": 38.46153846153847,
+      "multi_session_continuity": 42.5,
+      "hallucination_rate": 3.0564784053156147,
+      "num_qa_samples": 13,
+      "num_continuity_samples": 8,
+      "num_hallucination_samples": 13,
+      "answer_utility": 6.849508506213805,
+      "retrieval_recall_at_3": 0.9230769230769231,
+      "retrieval_mrr": 0.7564102564102563,
+      "retrieval_ndcg_at_5": 0.7634537778288139,
+      "evidence_hit_rate": 0.0,
+      "fact_retention_rate": 0.55934925497619,
+      "preference_retention_rate": 0.9230769230769231,
+      "contradiction_rate": 0.0,
+      "unsupported_claim_count": 1.5384615384615385,
+      "unsupported_claim_proportion": 0.20866910866910865,
+      "high_risk_factual_hallucinations": 0.15384615384615385,
+      "avg_runtime_per_turn_ms": 12187.615554307391,
+      "avg_response_length_words": 35.30769230769231
+    }
+  ],
+  "table2": [
+    {
+      "method": "sleep",
+      "applicable": true,
+      "delayed_recall_pre": 65.0,
+      "delayed_recall_post": 75.0,
+      "delayed_recall_improvement": 10.0,
+      "cue_based_pre": 45.0,
+      "cue_based_post": 47.5,
+      "cue_based_improvement": 2.5,
+      "integration_pre": 97.5,
+      "integration_post": 97.5,
+      "integration_improvement": 0.0,
+      "schema_util_pre": 0.0,
+      "schema_util_post": 0.0,
+      "schema_util_improvement": 0.0
+    }
+  ]
+}

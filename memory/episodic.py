@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from uuid import uuid4
 import json
 
-
+# Simplified imports and removed unused code
 @dataclass
 class Episode:
     """
@@ -45,6 +45,18 @@ class Episode:
     last_access: Optional[datetime] = None
     tags: List[str] = field(default_factory=list)
     consolidated: bool = False
+    salience_score: float = 0.5
+    novelty_score: float = 0.5
+    persona_relevance: float = 0.5
+    factuality_risk: float = 0.5
+    temporal_recency: float = 1.0
+    evidence_strength: float = 0.0
+    episode_type: str = "mixed"
+    confidence: float = 0.5
+    uncertainty: float = 0.5
+    repetition_count: int = 1
+    memory_consistency_score: float = 0.5
+    contradiction_flags: List[str] = field(default_factory=list)
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert episode to dictionary for serialization."""
@@ -58,7 +70,19 @@ class Episode:
             'access_count': self.access_count,
             'last_access': self.last_access.isoformat() if self.last_access else None,
             'tags': self.tags,
-            'consolidated': self.consolidated
+            'consolidated': self.consolidated,
+            'salience_score': self.salience_score,
+            'novelty_score': self.novelty_score,
+            'persona_relevance': self.persona_relevance,
+            'factuality_risk': self.factuality_risk,
+            'temporal_recency': self.temporal_recency,
+            'evidence_strength': self.evidence_strength,
+            'episode_type': self.episode_type,
+            'confidence': self.confidence,
+            'uncertainty': self.uncertainty,
+            'repetition_count': self.repetition_count,
+            'memory_consistency_score': self.memory_consistency_score,
+            'contradiction_flags': self.contradiction_flags,
         }
     
     @classmethod
@@ -94,7 +118,17 @@ class EpisodicMemoryStore:
         context: Optional[Dict[str, Any]] = None,
         importance: float = 0.5,
         novelty: float = 0.5,
-        tags: Optional[List[str]] = None
+        tags: Optional[List[str]] = None,
+        salience_score: float = 0.5,
+        novelty_score: float = 0.5,
+        persona_relevance: float = 0.5,
+        factuality_risk: float = 0.5,
+        temporal_recency: float = 1.0,
+        evidence_strength: float = 0.0,
+        episode_type: str = "mixed",
+        confidence: float = 0.5,
+        uncertainty: float = 0.5,
+        contradiction_flags: Optional[List[str]] = None,
     ) -> Episode:
         """
         Add a new episodic memory.
@@ -114,10 +148,64 @@ class EpisodicMemoryStore:
             context=context or {},
             importance=importance,
             novelty=novelty,
-            tags=tags or []
+            tags=tags or [],
+            salience_score=salience_score,
+            novelty_score=novelty_score,
+            persona_relevance=persona_relevance,
+            factuality_risk=factuality_risk,
+            temporal_recency=temporal_recency,
+            evidence_strength=evidence_strength,
+            episode_type=episode_type,
+            confidence=confidence,
+            uncertainty=uncertainty,
+            contradiction_flags=contradiction_flags or [],
         )
+
+        # Track simple repetition signal based on exact content match.
+        previous = [e for e in self.episodes.values() if e.content == content]
+        episode.repetition_count = 1 + len(previous)
         self.episodes[episode.id] = episode
         return episode
+
+    def get_candidates(
+        self,
+        query: str,
+        persona: Optional[str] = None,
+        top_k: int = 10,
+    ) -> List[Episode]:
+        """Retrieve episodic candidates using mixed lexical and metadata signals."""
+        if not self.episodes:
+            return []
+
+        query_l = (query or "").lower()
+        persona_l = (persona or "").lower()
+        scored = []
+
+        for ep in self.episodes.values():
+            text_l = ep.content.lower()
+            lexical_hits = sum(1 for t in query_l.split() if t and t in text_l)
+            lexical = min(1.0, lexical_hits / max(len(query_l.split()), 1))
+
+            persona_match = 0.0
+            if persona_l:
+                persona_tokens = [t for t in persona_l.split() if len(t) > 3]
+                if persona_tokens:
+                    persona_hits = sum(1 for t in persona_tokens if t in text_l)
+                    persona_match = min(1.0, persona_hits / len(persona_tokens))
+
+            score = (
+                0.30 * lexical
+                + 0.20 * ep.salience_score
+                + 0.15 * ep.novelty_score
+                + 0.15 * ep.temporal_recency
+                + 0.15 * ep.persona_relevance
+                + 0.05 * persona_match
+                - 0.10 * ep.factuality_risk
+            )
+            scored.append((ep, score))
+
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return [ep for ep, _ in scored[:top_k]]
     
     def get_episode(self, episode_id: str) -> Optional[Episode]:
         """Retrieve a specific episode by ID."""
@@ -211,6 +299,10 @@ class EpisodicMemoryStore:
             episode = Episode.from_dict(episode_data)
             self.episodes[episode.id] = episode
     
+    def clear(self) -> None:
+        """Clear all episodes from the store."""
+        self.episodes = {}
+    
     def get_stats(self) -> Dict[str, Any]:
         """Get statistics about the episodic memory store."""
         episodes_list = list(self.episodes.values())
@@ -220,5 +312,8 @@ class EpisodicMemoryStore:
             'unconsolidated': sum(1 for e in episodes_list if not e.consolidated),
             'avg_importance': sum(e.importance for e in episodes_list) / len(episodes_list) if episodes_list else 0,
             'avg_novelty': sum(e.novelty for e in episodes_list) / len(episodes_list) if episodes_list else 0,
+            'avg_salience': sum(e.salience_score for e in episodes_list) / len(episodes_list) if episodes_list else 0,
+            'avg_uncertainty': sum(e.uncertainty for e in episodes_list) / len(episodes_list) if episodes_list else 0,
+            'avg_evidence_strength': sum(e.evidence_strength for e in episodes_list) / len(episodes_list) if episodes_list else 0,
             'total_accesses': sum(e.access_count for e in episodes_list)
         }
