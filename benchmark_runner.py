@@ -281,7 +281,7 @@ class BenchmarkRunner:
         
         return table1_results
     
-    def run_table2_evaluation(self, method: str, skip_table2: bool = True) -> Dict[str, Any]:
+    def run_table2_evaluation(self, method: str) -> Dict[str, Any]:
         """
         Run Table 2 evaluation: Cognitive-Style Probes (Before vs After Sleep).
         
@@ -293,19 +293,10 @@ class BenchmarkRunner:
         
         Args:
             method: Method to evaluate
-            skip_table2: Skip Table 2 evaluation (it's very slow)
             
         Returns:
             Dictionary of results
         """
-        if skip_table2:
-            print(f"\nSkipping Table 2 evaluation (use --enable-table2 to enable)")
-            return {
-                'method': method,
-                'applicable': False,
-                'skipped': True
-            }
-            
         print(f"\n{'='*70}")
         print(f"TABLE 2 Evaluation: {method.upper()}")
         print(f"{'='*70}\n")

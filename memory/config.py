@@ -119,6 +119,34 @@ DEFAULT_POLICY_MAP: Dict[str, DatasetMemoryConfig] = {
         evidence_required=True,
         factuality_threshold=0.72,
     ),
+    "okvqa": DatasetMemoryConfig(
+        dataset_name="okvqa",
+        replay_top_k=10,
+        replay_top_k_min=4,
+        replay_top_k_max=14,
+        salience_weights={
+            "salience": 0.18,
+            "novelty": 0.12,
+            "uncertainty": 0.18,
+            "repetition": 0.12,
+            "recency": 0.14,
+            "persona_relevance": 0.08,
+            "evidence_strength": 0.18,
+        },
+        retrieval_weights={
+            "semantic": 0.24,
+            "lexical": 0.18,
+            "recency": 0.10,
+            "salience": 0.16,
+            "persona": 0.07,
+            "evidence": 0.25,
+            "contradiction_penalty": 0.32,
+        },
+        schema_abstraction_strength=0.30,
+        decay_rate=0.65,
+        evidence_required=True,
+        factuality_threshold=0.70,
+    ),
 }
 
 
