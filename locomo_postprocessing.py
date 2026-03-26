@@ -9,12 +9,116 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
 def _f4(value: Any) -> str:
     return f"{float(value):.4f}"
 
 
 def _f6(value: Any) -> str:
     return f"{float(value):.6f}"
+
+
+def save_research_graphs(
+    table1_results: List[Dict[str, Any]],
+    table2_result: Optional[Dict[str, Any]],
+    research_dir: Path,
+) -> None:
+    """Save research-facing line/bar/column PNG charts in RESEARCH/ folder."""
+    try:
+        import matplotlib.pyplot as plt
+    except Exception:
+        print("Skipping graph generation (matplotlib not installed).")
+        return
+
+    research_dir.mkdir(parents=True, exist_ok=True)
+
+    # Graph 1 (BAR): Table 1 primary quality metrics by method.
+    if table1_results:
+        methods = [str(r.get("method", "")) for r in table1_results]
+        qa = [_safe_float(r.get("long_horizon_qa", 0.0)) for r in table1_results]
+        continuity = [_safe_float(r.get("multi_session_continuity", 0.0)) for r in table1_results]
+        utility = [_safe_float(r.get("answer_utility", 0.0)) for r in table1_results]
+
+        x = list(range(len(methods)))
+        width = 0.25
+
+        plt.figure(figsize=(10, 5))
+        plt.bar([i - width for i in x], qa, width=width, label="Long-Horizon QA")
+        plt.bar(x, continuity, width=width, label="Multi-Session Continuity")
+        plt.bar([i + width for i in x], utility, width=width, label="Answer Utility")
+        plt.xticks(x, methods, rotation=20)
+        plt.ylabel("Score")
+        plt.title("LOCOMO Table 1: Quality Metrics by Method")
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(research_dir / "locomo_table1_quality_bar.png", dpi=160)
+        plt.close()
+
+    # Graph 2 (LINE): Table 2 pre vs post across probes.
+    if table2_result and table2_result.get("applicable", False):
+        probes = [
+            "Delayed Recall",
+            "Cue-Based Recall",
+            "Cross-Episode Integration",
+            "Schema Utilization",
+        ]
+        pre = [
+            _safe_float(table2_result.get("delayed_recall_pre", 0.0)),
+            _safe_float(table2_result.get("cue_based_pre", 0.0)),
+            _safe_float(table2_result.get("integration_pre", 0.0)),
+            _safe_float(table2_result.get("schema_util_pre", 0.0)),
+        ]
+        post = [
+            _safe_float(table2_result.get("delayed_recall_post", 0.0)),
+            _safe_float(table2_result.get("cue_based_post", 0.0)),
+            _safe_float(table2_result.get("integration_post", 0.0)),
+            _safe_float(table2_result.get("schema_util_post", 0.0)),
+        ]
+
+        x = list(range(len(probes)))
+        plt.figure(figsize=(10, 5))
+        plt.plot(x, pre, marker="o", linewidth=2, label="Pre-Consolidation")
+        plt.plot(x, post, marker="o", linewidth=2, label="Post-Consolidation")
+        plt.xticks(x, probes, rotation=20)
+        plt.ylabel("Score")
+        plt.title("LOCOMO Table 2: Pre vs Post Consolidation")
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(research_dir / "locomo_table2_pre_post_line.png", dpi=160)
+        plt.close()
+
+    # Graph 3 (COLUMN): Efficiency and hallucination diagnostics by method.
+    if table1_results:
+        methods = [str(r.get("method", "")) for r in table1_results]
+        runtime_ms = [_safe_float(r.get("avg_runtime_per_turn_ms", 0.0)) for r in table1_results]
+        halluc = [_safe_float(r.get("hallucination_rate", 0.0)) for r in table1_results]
+
+        x = list(range(len(methods)))
+        width = 0.35
+
+        fig, ax1 = plt.subplots(figsize=(10, 5))
+        ax1.bar([i - width / 2 for i in x], runtime_ms, width=width, label="Runtime/Turn (ms)")
+        ax1.set_ylabel("Runtime/Turn (ms)")
+        ax1.set_xticks(x)
+        ax1.set_xticklabels(methods, rotation=20)
+
+        ax2 = ax1.twinx()
+        ax2.bar([i + width / 2 for i in x], halluc, width=width, label="Hallucination Rate", alpha=0.75)
+        ax2.set_ylabel("Hallucination Rate")
+
+        ax1.set_title("LOCOMO Diagnostics: Runtime vs Hallucination")
+        handles1, labels1 = ax1.get_legend_handles_labels()
+        handles2, labels2 = ax2.get_legend_handles_labels()
+        ax1.legend(handles1 + handles2, labels1 + labels2, loc="upper right")
+        fig.tight_layout()
+        fig.savefig(research_dir / "locomo_runtime_hallucination_column.png", dpi=160)
+        plt.close(fig)
 
 
 def save_results_tables(
@@ -105,6 +209,10 @@ def save_results_tables(
                     _f4(table2_result.get("schema_util_improvement", 0.0)),
                 ]
             )
+
+    # Save research graphs (line/bar/column) in workspace RESEARCH folder.
+    research_dir = Path(__file__).parent / "RESEARCH"
+    save_research_graphs(table1_results, table2_result, research_dir)
 
 
 def _load_latest_results_json(output_dir: Path) -> Dict[str, Any]:

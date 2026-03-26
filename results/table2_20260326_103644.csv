@@ -1,0 +1,5 @@
+Probe,Pre-Consolidation,Post-Consolidation,Delta Improvement
+Delayed Recall Accuracy,30.0000,30.0000,0.0000
+Cue-Based Recall,10.0000,0.0000,-10.0000
+Cross-Episode Integration,100.0000,100.0000,0.0000
+Schema Utilization Rate,0.0000,0.0000,0.0000
