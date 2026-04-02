@@ -4,7 +4,7 @@ Large language model (LLM) agents excel at in-context reasoning but lack persist
 
 We draw directly on this mechanism to design a sleep-inspired memory consolidation framework for LLM agents. The system implements a three-tier memory architecture — episodic, consolidated, and schema — and a five-phase sleep cycle covering replay selection, compression, consolidation, schema formation, and decay.
 
-We evaluate the framework against four baselines (vanilla LLM, RAG, episodic-only, summarization) across four datasets: PersonaChat, PersonaMem, LOCOMO, and OK-VQA. The sleep agent achieves an answer utility of 11.00 on PersonaMem (versus 9.01 for the vanilla baseline) and a delayed recall improvement of +52.14 percentage points on PersonaChat after consolidation. These results suggest that structured offline consolidation — modeled after the sleeping brain — can substantially improve long-horizon agent memory.
+We evaluate the framework against four baselines (vanilla LLM, RAG, episodic-only, summarization) across four datasets: PersonaChat, PersonaMem, LOCOMO, and OK-VQA. Under the updated evaluation setting ($n=200$ per dataset), the sleep agent achieves an answer utility of 9.62 on PersonaMem (versus 8.02 for the vanilla baseline), 67.20% multi-session continuity on PersonaChat, and a +21.00 delayed-recall gain in post-consolidation cognitive probes. These results suggest that structured offline consolidation — modeled after the sleeping brain — can substantially improve long-horizon agent memory.
 
 ---
 
