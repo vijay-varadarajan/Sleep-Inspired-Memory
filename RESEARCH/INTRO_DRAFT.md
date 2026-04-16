@@ -53,6 +53,43 @@ On the AI side, Pink et al. [5] argued that LLM agents fundamentally need episod
 | Sarin et al. (2025) [10] | Memoria framework | Session summaries + knowledge graphs for personalization | No offline consolidation; no multimodal support |
 | Hassell et al. (2025) [11] | Episodic memory with critique | Up to 24.8% accuracy gain over RAG baselines via reflection | No sleep cycle; limited to classification tasks |
 
+### Summary of Related Work - Latex
+
+\begin{table}[h!]
+\centering
+\caption{Comparison of Existing Approaches}
+\label{tab:related_work}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|p{5cm}|p{5cm}|}
+\hline
+\textbf{Author(s)} & \textbf{Key Contribution} & \textbf{Limitation / Gap} \\
+\hline
+Brodt et al. (2023) [1] & Sleep drives memory consolidation via hippocampal replay & Abstraction mechanisms not characterized \\
+\hline
+Squire et al. (2015) [2] & Memory reorganization rate depends on prior knowledge & Does not address AI applications \\
+\hline
+Bendor \& Wilson (2012) [3] & Hippocampal replay is steerable via external cues during sleep & Limited to rodent models \\
+\hline
+Diamond et al. (2025) [4] & Sleep boosts sequential structure over detail; effects persist years & No computational model proposed \\
+\hline
+Pink et al. (2025) [5] & Episodic memory with consolidation identified & No implementation or benchmark results \\
+\hline
+Du et al. (2025) [6] & Categorizes consolidation, forgetting and retrieval & Evaluation remains fragmented \\
+\hline
+Hu et al. (2026) [8] & Projects sleep consolidation as next major stage & Prospective; no system proposed \\
+\hline
+Kagaya et al. (2024) [7] & Past multimodal experiences improve agent planning & No consolidation cycle \\
+\hline
+Jiang et al. (2026) [9] & Associative memory graph achieves strong results & No schema abstraction \\
+\hline
+Sarin et al. (2025) [10] & Session summaries + knowledge graphs for personalization & no multimodal support \\
+\hline
+Hassell et al. (2025) [11] & Up to 24.8\% accuracy gain over RAG baselines & No sleep cycle; limited to classification tasks \\
+\hline
+\end{tabular}%
+}
+\end{table}
+
 ### References
 
 [1] Brodt, S. et al. (2023). "Sleep—A brain-state serving systems memory consolidation." *Neuron*. PMID: 37023710.
