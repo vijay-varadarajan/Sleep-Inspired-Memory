@@ -34,18 +34,6 @@ logger = logging.getLogger(__name__)
 
 
 class SleepCycle:
-    """
-    Manages the sleep-based memory consolidation process.
-    
-    A sleep cycle involves:
-    1. Prioritized replay of important/novel episodes
-    2. Generative compression using LLM
-    3. Creation of consolidated memories
-    4. Schema induction from patterns
-    5. Forgetting/decay of low-value memories
-    
-    This is the core of the biologically-inspired consolidation system.
-    """
     
     def __init__(
         self,

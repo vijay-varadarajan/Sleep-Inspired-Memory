@@ -20,24 +20,6 @@ import json
 # Simplified imports and removed unused code
 @dataclass
 class Schema:
-    """
-    A schema representing abstract knowledge patterns.
-    
-    Schemas are induced from multiple consolidated memories that share
-    common themes, concepts, or relationships.
-    
-    Attributes:
-        id: Unique identifier
-        timestamp: When this schema was created
-        name: Short descriptive name for the schema
-        description: Detailed description of the pattern/concept
-        core_concepts: Key concepts that define this schema
-        related_memory_ids: Consolidated memory IDs that support this schema
-        examples: Specific examples demonstrating the schema
-        confidence: Confidence in this schema (based on supporting evidence)
-        access_count: Number of times accessed
-        last_access: Timestamp of last access
-    """
     id: str = field(default_factory=lambda: str(uuid4()))
     timestamp: datetime = field(default_factory=datetime.now)
     name: str = ""

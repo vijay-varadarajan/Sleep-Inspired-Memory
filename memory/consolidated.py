@@ -20,22 +20,6 @@ import json
 # Simplified imports and removed unused code
 @dataclass
 class ConsolidatedMemory:
-    """
-    A consolidated memory representing compressed/summarized knowledge.
-    
-    Created during sleep consolidation from one or more episodic memories.
-    
-    Attributes:
-        id: Unique identifier
-        timestamp: When this memory was consolidated
-        summary: Compressed, LLM-generated summary of source episodes
-        source_episode_ids: IDs of episodes that contributed to this memory
-        key_concepts: Extracted concepts/entities from the episodes
-        importance: Aggregate importance score
-        access_count: Number of times accessed during retrieval
-        last_access: Timestamp of last access
-        tags: Categorization tags
-    """
     id: str = field(default_factory=lambda: str(uuid4()))
     timestamp: datetime = field(default_factory=datetime.now)
     summary: str = ""

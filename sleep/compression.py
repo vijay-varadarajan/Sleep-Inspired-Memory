@@ -29,16 +29,6 @@ from utils.api_counter import increment_llm_call
 
 @dataclass
 class CompressionResult:
-    """
-    Result of compressing one or more episodes.
-    
-    Attributes:
-        summary: Compressed textual summary
-        key_concepts: Extracted key concepts/entities
-        themes: High-level themes identified
-        relationships: Identified relationships between concepts
-        confidence: Confidence in the compression (0-1)
-    """
     summary: str
     key_concepts: List[str]
     themes: List[str]
@@ -62,13 +52,6 @@ class StructuredMemoryRecord:
 
 
 class MemoryCompressor:
-    """
-    LLM-based memory compression using Gemini.
-    
-    Performs generative compression to transform raw episodic memories
-    into consolidated, semantic representations.
-    """
-    
     def __init__(
         self,
         api_key: Optional[str] = None,

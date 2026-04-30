@@ -31,29 +31,6 @@ def calculate_replay_priority(
     novelty_weight: float = 0.3,
     access_bonus: float = 0.1
 ) -> float:
-    """
-    Calculate priority score for replaying/consolidating an episode.
-    
-    The priority function combines multiple factors that are known to
-    influence memory consolidation in biological systems:
-    
-    1. Recency: Recently encoded memories are preferentially replayed
-       (decays exponentially with time)
-    2. Importance: Emotionally salient or goal-relevant memories
-    3. Novelty: New, unexpected information
-    4. Access patterns: Memories that have been retrieved are strengthened
-    
-    Args:
-        episode: The episode to score
-        current_time: Current timestamp for recency calculation
-        recency_weight: Weight for recency component (0-1)
-        importance_weight: Weight for importance component (0-1)
-        novelty_weight: Weight for novelty component (0-1)
-        access_bonus: Bonus multiplier for accessed episodes
-        
-    Returns:
-        Priority score (higher = more likely to be replayed)
-    """
     # Recency score: exponential decay (half-life of 7 days)
     time_delta = current_time - episode.timestamp
     hours_elapsed = time_delta.total_seconds() / 3600

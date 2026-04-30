@@ -32,15 +32,6 @@ from utils.api_counter import increment_llm_call
 
 
 class MemoryAgent:
-    """
-    LLM agent with sleep-inspired memory consolidation.
-    
-    The agent:
-    1. Interacts with users and stores experiences as episodic memories
-    2. Periodically runs sleep cycles to consolidate memories
-    3. Retrieves relevant memories to inform responses
-    4. Uses schemas for generalization and transfer
-    """
     
     def __init__(
         self,
@@ -51,15 +42,6 @@ class MemoryAgent:
         dataset_name: str = "personamem",
         memory_config: Optional[DatasetMemoryConfig] = None,
     ):
-        """
-        Initialize the memory agent.
-        
-        Args:
-            api_key: Google API key (defaults to GOOGLE_API_KEY env var)
-            model_name: Gemini model to use
-            temperature: Sampling temperature for responses
-            auto_sleep_threshold: Number of new episodes before auto-sleep
-        """
         self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
             raise ValueError(

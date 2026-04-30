@@ -20,21 +20,6 @@ import json
 # Simplified imports and removed unused code
 @dataclass
 class Episode:
-    """
-    A single episodic memory representing a raw interaction or experience.
-    
-    Attributes:
-        id: Unique identifier
-        timestamp: When the episode was created
-        content: Raw text content of the episode
-        context: Optional contextual information (user query, action taken, etc.)
-        importance: Subjective importance score (0-1), can be manually set or computed
-        novelty: Estimated novelty score (0-1), based on semantic similarity to existing episodes
-        access_count: Number of times this episode has been accessed/replayed
-        last_access: Timestamp of last access
-        tags: Optional tags for categorization
-        consolidated: Whether this episode has been consolidated into long-term memory
-    """
     id: str = field(default_factory=lambda: str(uuid4()))
     timestamp: datetime = field(default_factory=datetime.now)
     content: str = ""
